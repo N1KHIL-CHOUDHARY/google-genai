@@ -7,7 +7,7 @@ import ContactPage from './pages/ContactPage';
 import Dashboard from './pages/Dashboard';
 import LoginPage from './pages/LoginPage';
 import SignupPage from './pages/SignupPage';
-import DocumentsPage from './pages/DoucmentsPage';
+import DocumentsPage from './pages/DocumentsPage';
 import ProfilePage from './pages/profile';
 import SummaryPage from './pages/SummaryPage';
 

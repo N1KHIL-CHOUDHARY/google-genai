@@ -1,12 +1,20 @@
 import { useState, useCallback } from 'react';
 import { fileService } from '../services/api';
+import { useAuth } from './useAuth';
 
 export const useFileUpload = () => {
+    const { user } = useAuth();
     const [uploading, setUploading] = useState(false);
     const [progress, setProgress] = useState(0);
     const [error, setError] = useState(null);
 
     const uploadFile = useCallback(async (file) => {
+        // Check if user is authenticated
+        if (!user?.id) {
+            setError('User not authenticated. Please log in to upload files.');
+            return { success: false, error: 'User not authenticated' };
+        }
+
         setUploading(true);
         setProgress(0);
         setError(null);
@@ -23,8 +31,8 @@ export const useFileUpload = () => {
                 });
             }, 200);
 
-            // Call file service
-            const result = await fileService.uploadFile(file);
+            // Call file service with userId from auth context
+            const result = await fileService.uploadFile(file, user.id);
 
             clearInterval(progressInterval);
             setProgress(100);
@@ -41,7 +49,7 @@ export const useFileUpload = () => {
         } finally {
             setUploading(false);
         }
-    }, []);
+    }, [user?.id]);
 
     const resetUpload = useCallback(() => {
         setUploading(false);

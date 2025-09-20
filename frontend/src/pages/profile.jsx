@@ -35,7 +35,7 @@ const ProfilePage = () => {
                     value={value}
                     onChange={(e) => setValue(e.target.value)}
                     readOnly={readOnly}
-                    className={`w-full pl-10 pr-4 py-2.5 border rounded-lg ${readOnly ? 'bg-gray-100 text-gray-500' : 'border-gray-300 focus:ring-2 focus:ring-[#193A83] focus:border-transparent'}`}
+                    className={`w-full pl-10 pr-4 py-2.5 border rounded-lg ${readOnly ? 'bg-gray-100 text-gray-500' : 'border-gray-300 focus:ring-2 focus:ring-[#193A83] focus:border-transparent text-gray-900'}`}
                 />
             </div>
         </div>
@@ -94,7 +94,7 @@ const ProfilePage = () => {
                         />
                         <div className="flex justify-end">
                             <motion.button
-                                className="px-5 py-2.5 rounded-lg shadow-md font-semibold bg-black text-white"
+                                className="px-5 py-2.5 rounded-lg shadow-md font-semibold bg-primary text-white hover:bg-primary-dark focus:ring-2 focus:ring-primary"
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                             >
@@ -123,7 +123,7 @@ const ProfilePage = () => {
                         />
                         <div className="flex justify-end">
                              <motion.button
-                                className="px-5 py-2.5 rounded-lg shadow-md font-semibold bg-black text-white"
+                                className="px-5 py-2.5 rounded-lg shadow-md font-semibold bg-primary text-white hover:bg-primary-dark focus:ring-2 focus:ring-primary"
                                 whileHover={{ scale: 1.05 }}
                                 whileTap={{ scale: 0.95 }}
                             >

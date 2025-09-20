@@ -3,7 +3,7 @@
 
 // Base configuration
 const API_BASE_URL = 'http://localhost:8000';
-const API_TIMEOUT = 10000; 
+const API_TIMEOUT = 30000; 
 
 const createRequest = async (endpoint, options = {}) => {
     const url = `${API_BASE_URL}${endpoint}`;
@@ -299,9 +299,37 @@ export const fileService = {
 
     // Delete file
     deleteFile: async (fileId) => {
-        await simulateDelay(500);
-        
-        return { success: true, data: { fileId, deleted: true } };
+        try {
+            const result = await createRequest(`/documents/${fileId}`, {
+                method: 'DELETE'
+            });
+
+            if (result.success) {
+                return { success: true, data: { fileId, deleted: true } };
+            } else {
+                return { success: false, error: result.error || 'Failed to delete file' };
+            }
+        } catch (error) {
+            return { success: false, error: 'Network error. Please check your connection.' };
+        }
+    },
+
+    // Rename file
+    renameFile: async (fileId, newName) => {
+        try {
+            const result = await createRequest(`/documents/${fileId}/rename`, {
+                method: 'PUT',
+                body: JSON.stringify({ name: newName })
+            });
+
+            if (result.success) {
+                return { success: true, data: { fileId, newName } };
+            } else {
+                return { success: false, error: result.error || 'Failed to rename file' };
+            }
+        } catch (error) {
+            return { success: false, error: 'Network error. Please check your connection.' };
+        }
     }
 };
 
@@ -333,12 +361,13 @@ export const documentService = {
     },
 
     // Chat with document
-    chatWithDocument: async (userId, message) => {
+    chatWithDocument: async (documentId, userId, message) => {
         try {
             const result = await createRequest('/chat/user', {
                 method: 'POST',
                 body: JSON.stringify({ 
-                    user_id: userId, 
+                    document_id: documentId,
+                    user_id: userId,
                     query: message 
                 })
             });
@@ -346,6 +375,7 @@ export const documentService = {
             if (result.success) {
                 const response = {
                     id: Date.now(),
+                    documentId,
                     userId,
                     userMessage: message,
                     aiResponse: result.data.response,

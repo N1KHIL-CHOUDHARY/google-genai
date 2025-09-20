@@ -1,10 +1,3 @@
-# Route to fetch all documents for a user
-from app.services.firestore_manager import get_documents_by_user_id
-
-
-from app.services.firestore_manager import get_user_by_email
-# Login route: authenticate user by email and password
-
 # backend/app/main.py
 from fastapi import FastAPI, UploadFile, File, HTTPException, Body, Form
 from fastapi.responses import JSONResponse
@@ -12,7 +5,20 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.services.document_processor import process_document
 from app.services.summarizer import summarize_document
 from app.services.qa_engine import chat_with_documents
-from app.services.firestore_manager import save_user, save_document_summary
+from pydantic import BaseModel, EmailStr
+from app.services.firestore_manager import (
+    save_user, 
+    save_document_summary,
+    get_documents_by_user_id,
+    get_user_by_email
+)
+
+class RegisterUser(BaseModel):
+    name: str
+    email: EmailStr
+    password: str
+
+
 
 app = FastAPI(
     title="Legal Document Assistant API",
@@ -35,6 +41,7 @@ async def root():
 @app.get("/health")
 async def health_check():
     return {"status": "healthy", "timestamp": "2024-01-01T00:00:00Z"}
+
 @app.get("/documents/user/{user_id}")
 async def get_user_documents(user_id: str):
     docs = get_documents_by_user_id(user_id)
@@ -43,23 +50,18 @@ async def get_user_documents(user_id: str):
 @app.post("/documents/upload")
 async def upload_document(
     file: UploadFile = File(...),
-    user_id: str = Form(None),
-    user_id_body: str = Body(None)
+    user_id: str = Form(...)
 ):
-    # Accept user_id from either Form (frontend) or Body (Swagger UI)
-    user_id = user_id or user_id_body
     print("Received user_id:", user_id)
     print("Received file:", getattr(file, 'filename', None))
     try:
         doc_id, meta = await process_document(file)
-        # Generate summary
         summary = await summarize_document(doc_id)
-        # Save to Firestore
         save_document_summary(user_id, doc_id, meta.get("filename", ""), summary)
         return {"doc_id": doc_id, "meta": meta, "summary": summary}
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-
+    
 @app.get("/analysis/{documentId}")
 async def get_analysis(documentId: str):
     try:
@@ -68,11 +70,8 @@ async def get_analysis(documentId: str):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
-
-# New chat route: user_id and query
 @app.post("/chat/user")
 async def chat_user(user_id: str = Body(...), query: str = Body(...)):
-    from app.services.firestore_manager import get_documents_by_user_id
     docs = get_documents_by_user_id(user_id)
     doc_ids = [d["doc_id"] for d in docs if d.get("doc_id")]
     try:
@@ -81,18 +80,31 @@ async def chat_user(user_id: str = Body(...), query: str = Body(...)):
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
+
+    
 @app.post("/auth/register")
-async def register(name: str = Body(...), email: str = Body(...), password: str = Body(...)):
+async def register(user: RegisterUser):
+    # Check if a user with this email already exists
+    existing_user = get_user_by_email(user.email)
+    if existing_user:
+        raise HTTPException(status_code=400, detail="A user with this email already exists.")
+    
     try:
-        user_id = save_user(name, email, password)
-        return {"message": "User registered successfully", "user": {"id": user_id, "name": name, "email": email}}
+        # The save_user function should handle password hashing internally
+        user_id = save_user(user.name, user.email, user.password)
+        return {"message": "User registered successfully", "user": {"id": user_id, "name": user.name, "email": user.email}}
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"An unexpected error occurred during registration: {e}")
+
 @app.post("/auth/login")
 async def login(email: str = Body(...), password: str = Body(...)):
+    # Import the new verify_password function
+    from app.services.firestore_manager import verify_password
+
     user = get_user_by_email(email)
-    if not user:
-        raise HTTPException(status_code=404, detail="User not found")
-    if user.get("password") != password:
+    
+    # Securely check the password hash instead of plain text
+    if not user or not verify_password(password, user.get("password")):
         raise HTTPException(status_code=401, detail="Invalid credentials")
+        
     return {"message": "Login successful", "user": {"id": user.get("id"), "name": user.get("name"), "email": user.get("email")}}
